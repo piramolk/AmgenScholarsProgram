@@ -12,3 +12,8 @@ In order to maximize the students’ experience, the host faculty will consult w
 
 In addition to the lab experience, the students will have chance to learn about Japan and its people as well as its language. Japanese language lessons and cultural activities will be planned. The students will have plenty of opportunities to meet and interact with Japanese students. We aim to provide students with both cutting-edge research experience and unforgettable memories of Japan. By doing so, we hope to inspire them to become a better researcher and, more importantly, a better person with a good understanding of global values.
 
+## Sekino Research Group
+
+One of the key issues in an aging society is how to increase the human health span. The important things are to detect a disease at an early stage and to treat it non-invasively. Magnetic fields penetrate deeply into the human body without hazardous exposure effects. This feature enables us to use magnetic fields widely in diagnostic imaging and monitoring. Meanwhile, recent studies have shown that magnetic stimulation of the brain alleviates neuropathic pain. This treatment is now clinically applied as an alternative to brain surgery. Our laboratory is working on the development of future medical equipment using superconductors and electromagnetic fields. Research steps are composed devising novel equipment from discussion based on electromagnetics and superconductivity, design and optimization of the equipment using numerical simulations, and fabrication of real equipment.
+
+
