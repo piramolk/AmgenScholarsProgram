@@ -1,0 +1,1207 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+#include <FilterDialog> menus=0
+
+//zzz()
+//redimension /n=0 gtime, gtick, mes, thermistor, mf, temp
+
+constant kTimeOut = 1
+
+//0x  --> hexadecimal system 
+
+//now that it has to include ZZ axis and rotation,
+function crcinit()
+	make /o/n=256/Y=0x48 kCRCTable
+	kCRCTable[0x00, 0x0f] = {0x00, 0xa6, 0xea, 0x4c, 0x72, 0xd4, 0x98, 0x3e, 0xe4, 0x42, 0x0e, 0xa8, 0x96, 0x30, 0x7c, 0xda}
+	kCRCTable[0x10, 0x1f] = {0x6e, 0xc8, 0x84, 0x22, 0x1c, 0xba, 0xf6, 0x50, 0x8a, 0x2c, 0x60, 0xc6, 0xf8, 0x5e, 0x12, 0xb4}
+	kCRCTable[0x20, 0x2f] = {0xdc, 0x7a, 0x36, 0x90, 0xae, 0x08, 0x44, 0xe2, 0x38, 0x9e, 0xd2, 0x74, 0x4a, 0xec, 0xa0, 0x06}
+	kCRCTable[0x30, 0x3f] = {0xb2, 0x14, 0x58, 0xfe, 0xc0, 0x66, 0x2a, 0x8c, 0x56, 0xf0, 0xbc, 0x1a, 0x24, 0x82, 0xce, 0x68}
+	kCRCTable[0x40, 0x4f] = {0x1e, 0xb8, 0xf4, 0x52, 0x6c, 0xca, 0x86, 0x20, 0xfa, 0x5c, 0x10, 0xb6, 0x88, 0x2e, 0x62, 0xc4}
+	kCRCTable[0x50, 0x5f] = {0x70, 0xd6, 0x9a, 0x3c, 0x02, 0xa4, 0xe8, 0x4e, 0x94, 0x32, 0x7e, 0xd8, 0xe6, 0x40, 0x0c, 0xaa}
+	kCRCTable[0x60, 0x6f] = {0xc2, 0x64, 0x28, 0x8e, 0xb0, 0x16, 0x5a, 0xfc, 0x26, 0x80, 0xcc, 0x6a, 0x54, 0xf2, 0xbe, 0x18}
+	kCRCTable[0x70, 0x7f] = {0xac, 0x0a, 0x46, 0xe0, 0xde, 0x78, 0x34, 0x92, 0x48, 0xee, 0xa2, 0x04, 0x3a, 0x9c, 0xd0, 0x76}
+	kCRCTable[0x80, 0x8f] = {0x3c, 0x9a, 0xd6, 0x70, 0x4e, 0xe8, 0xa4, 0x02, 0xd8, 0x7e, 0x32, 0x94, 0xaa, 0x0c, 0x40, 0xe6}
+	kCRCTable[0x90, 0x9f] = {0x52, 0xf4, 0xb8, 0x1e, 0x20, 0x86, 0xca, 0x6c, 0xb6, 0x10, 0x5c, 0xfa, 0xc4, 0x62, 0x2e, 0x88}
+	kCRCTable[0xa0, 0xaf] = {0xe0, 0x46, 0x0a, 0xac, 0x92, 0x34, 0x78, 0xde, 0x04, 0xa2, 0xee, 0x48, 0x76, 0xd0, 0x9c, 0x3a}
+	kCRCTable[0xb0, 0xbf] = {0x8e, 0x28, 0x64, 0xc2, 0xfc, 0x5a, 0x16, 0xb0, 0x6a, 0xcc, 0x80, 0x26, 0x18, 0xbe, 0xf2, 0x54}
+	kCRCTable[0xc0, 0xcf] = {0x22, 0x84, 0xc8, 0x6e, 0x50, 0xf6, 0xba, 0x1c, 0xc6, 0x60, 0x2c, 0x8a, 0xb4, 0x12, 0x5e, 0xf8}
+	kCRCTable[0xd0, 0xdf] = {0x4c, 0xea, 0xa6, 0x00, 0x3e, 0x98, 0xd4, 0x72, 0xa8, 0x0e, 0x42, 0xe4, 0xda, 0x7c, 0x30, 0x96}
+	kCRCTable[0xe0, 0xef] = {0xfe, 0x58, 0x14, 0xb2, 0x8c, 0x2a, 0x66, 0xc0, 0x1a, 0xbc, 0xf0, 0x56, 0x68, 0xce, 0x82, 0x24}
+	kCRCTable[0xf0, 0xff] = {0x90, 0x36, 0x7a, 0xdc, 0xe2, 0x44, 0x08, 0xae, 0x74, 0xd2, 0x9e, 0x38, 0x06, 0xa0, 0xec, 0x4a}
+	make /o/n=16/Y=0x48 kCRC4to3
+	kCRC4to3 = {0x80, 0x00, 0x01, 0x80, 0x02, 0x03, 0x04, 0x80, 0x05, 0x06, 0x07, 0x80, 0x80, 0x80, 0x80, 0x80}
+end
+
+function getpacket(sample_data)
+	wave sample_data
+	variable i
+	variable c
+	variable mes
+	//variable thermistor
+	wave kCRCTable
+
+//0x48 = 72
+
+	make /o/n=8/Y=0x48 frame           //this creates a wave called frame 
+	do
+		VDTReadBinary2 /O=(kTimeOut)/Q/TYPE=0x48 c      //assigns c the binary value 
+		if (V_VDT < 1)
+			return 0
+		endif
+	while (c != 0x7e)   //0x7e = 126
+		
+	frame[0] = c        
+// frame consists of {c, 0,0,0,0,0,0,0,0}
+
+	for (i = 1; i < 7; i += 1)    //this goes through the array of frame which is size 8, and since the first bit is c, can ignore
+		
+		VDTReadBinary2 /O=(kTimeOut)/Q/TYPE=0x48 c   // reads binary data from the operations port into C 
+														//VDTReadBinary sets the variable V_VDT to the number of items read 
+		
+		if (V_VDT < 1)  //==> this means nothing was read
+			return 0
+		endif
+		
+		//at this point c is read as binary data from VDT
+		
+		if (c == 0x7d)   //decimal is 125, c=125
+		
+			VDTReadBinary2 /O=(kTimeOut)/Q/TYPE=0x48 c        //ktimeout is the timeout value.c is reread and reset
+			if (c == 0x5d)  //decimal, c=93    
+				frame[i] = 0x7d     // decimal is 125 , this value is now stored in whatever part of the array
+			elseif (c == 0x5e)  //decimal, c=94
+				frame[i] = 0x7e   //decimal is 126 , this value is stored in whatever part of the array
+			else
+				return 0   //if neither stored, then nothing
+			endif
+		elseif (c == 0x7e)   //if c is 126 then nothing
+			return 0
+		else
+			frame[i] = c //value of c is stored 
+		endif
+		
+	endfor
+	
+	
+	
+	if (frame[1] < 0x80)   // if the value is < 128
+		mes = frame[1]*2^24 + frame[2]*2^16 + frame[3]*2^8 + frame[4] //why such a big number, 2^24??? 
+	else
+		mes = frame[1]*2^24 + frame[2]*2^16 + frame[3]*2^8 + frame[4]
+		mes = -(0x100000000-mes)
+	endif
+//	thermistor = frame[5]*2^8+frame[6]
+	sample_data[0] = mes
+	//sample_data[1] = thermistor
+	return 1
+
+end
+
+
+function init()
+	make /o/n=0/d gtime, gtick
+	make /o/n=0 mes, thermistor
+	make /o/n=0 mf, temp
+	make /o/n=2 sample_data	
+end
+
+
+
+///////////////////////////////////////////////////////
+///////////////////////////////////////////////////////
+///////////////////////////////////////////////////////
+function zzz() //main pro
+
+		
+		
+make /o/n=0/d gasli                     
+make /o /n=0 avg_data2
+make/o/n=0 sayac      
+
+	//////
+	VDT2 KillIO	
+	VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+	VDTOpenPort2 COM4
+	VDTOperationsPort2 COM4
+	VDTWrite2 "/1 1 move rel 440937 \r\n"
+	//VDTWrite2 "/1 1 move rel 104989 \r\n" // to +Z
+	//VDTWrite2 "/2 1 move rel -220368 \r\n" // to -Y
+	//VDTWrite2 "/3 1 move rel -220368 \r\n" // to -X                    
+	//VDTWrite2 "/4 1 move rel 128000 \r\n"//yy@@@@@@@@@@@@@@@@@@@@
+
+
+	Sleep /S 3.3	  //time taken to execute *seconds, need to recalculate how long         
+	
+	variable k
+	
+	variable yy
+	
+	for(yy=0;yy<21;yy+=1) //this basically calculates for each single point 
+	
+	for(k=0;k<21;k+=1)  //y  --> 441 data points?
+		variable i
+		variable lastsave = 0
+		
+		
+		//////// sequence: 
+              make /o/n=0/d gtime2, gtick2
+
+	      VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		//VDTWrite2 "/1 1 move rel 800000 \r\n"
+		Sleep /S 3.3
+	//z sweep
+		VDTClosePort2 COM4
+		
+		variable i2
+		variable lastsave2= 0
+		variable base
+		VDT2 /P=COM3 killio, baud=9600, buffer=8192 ,databits=8,parity=0, stopbits=1, in=0, out=0
+		VDTOperationsPort2 COM3
+		VDTGetStatus2 0, 1, 1
+		
+		variable ret
+		wave mes
+		wave mf
+		wave sample_data
+
+
+		
+		for (i2 = 0; i2 <15; i2 += 1)
+		
+			if (60*15 < datetime-lastsave2)
+				SaveExperiment
+				lastsave2 = datetime
+			endif  //15 dakikada bir save ediyor
+			ret = getpacket(sample_data)
+			if (ret == 1)
+				redimension /n=(numpnts(gtime2)+1) gtime2, gtick2, mes, mf
+				gtime2[numpnts(gtime2)-1] = datetime
+				gtick2[numpnts(gtime2)-1] = ticks
+				mes[numpnts(gtime2)-1] = sample_data[0]
+				mf = mes/(2^23)*5/2/90 * 1000000   //need only this, microtesla 
+			endif
+			doupdate
+		endfor
+			VDTClosePort2 COM3
+	
+		WaveStats mf
+		WaveStats/Q mf; print V_avg
+		base= V_avg
+			
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		//VDTWrite2 "/1 1 move rel -800000 \r\n"
+		//VDTWrite2 "/4 1 move rel -128000 \r\n"
+		Sleep /S 3.3
+		//pitch for 5mm + 128000
+	
+		VDTClosePort2 COM4		
+		
+		
+		/////////////////////
+
+		
+		
+	///////////////////////
+		VDT2 /P=COM3 killio, baud=9600, buffer=8192 ,databits=8,parity=0, stopbits=1, in=0, out=0
+		VDTOperationsPort2 COM3
+		VDTGetStatus2 0, 1, 1
+
+
+
+		wave gtick, gtime
+		//random wave variables 
+		 // change nmeasurement time and scope++data presentation, add columns for rotation and zz
+		
+		for (i = 0; i < 10; i += 1)
+		
+			if (60*15 < datetime-lastsave)  //saves every 15 minutes
+				SaveExperiment
+				lastsave = datetime
+			endif  
+			ret = getpacket(sample_data)
+			
+			//at the same position of each array, corresponding info -- time, ticks,
+			//redimension remakes the named waves, so now all the following waves have n points 
+			
+			
+			
+			
+			if (ret == 1)
+				redimension /n=(numpnts(gtime)+1) gtime, gtick, mes,  mf                            //creating new waves here
+				gtime[numpnts(gtime)-1] = datetime                                                         //initializing gtime , location of numpnts-1 in its array, having datetime
+				gtick[numpnts(gtime)-1] = ticks  //
+				mes[numpnts(gtime)-1] = sample_data[0]                                       //also another array, having the same contents as sample data 1st position
+				mf = (mes/(2^23)*5/2/90)*1000000 - base                                                                 // base level for that day was 0.000896				
+			endif
+			doupdate
+		endfor
+		
+		//need to get new numbers for this
+		
+		redimension /n=(numpnts(gasli)+1) avg_data2, gasli
+		avg_data2[numpnts(gasli)-1]= (mf[numpnts(sayac)+1]+mf[numpnts(sayac)+2]+mf[numpnts(sayac)+3]+mf[numpnts(sayac)+4]+mf[numpnts(sayac)+5]+mf[numpnts(sayac)+6]+mf[numpnts(sayac)+7]+mf[numpnts(sayac)+8]+mf[numpnts(sayac)+9])/9
+		redimension /n= (numpnts(sayac)+10) sayac
+		VDTClosePort2 COM3
+		
+		
+		///////////////////////
+		//string pp= "/1 1 move rel 20997 "  // replace with
+		//string moveXX = "/1 1 move real 20997 "
+		//string moveYY ="/2 1 move rel "
+		string pp= "/2 1 move rel 20997 "
+		
+		string aa=""
+		string command = pp + "\r\n"
+		string asli=aa + "\r\n"
+	
+	
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		//VDTWrite2 "/"
+	
+		VDTWrite2 command
+		Sleep /S 0.33
+	
+		VDTClosePort2 COM4		
+		
+		
+	endfor
+
+	//////
+	VDT2 KillIO	
+	VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+	VDTOpenPort2 COM4
+	VDTOperationsPort2 COM4
+	VDTWrite2 "/2 1 move rel -440937 \r\n"
+	VDTWrite2 "/3 1 move rel 20997 \r\n"
+
+	Sleep /S 3.3
+	
+	VDTClosePort2 COM4
+		
+	
+	endfor
+	
+	//////
+	VDT2 KillIO	
+	VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0 //default settings 
+	VDTOpenPort2 COM4
+	VDTOperationsPort2 COM4
+	VDTWrite2 "/2 1 move rel 220368 \r\n"
+	VDTWrite2 "/3 1 move rel -220368 \r\n"
+	VDTWrite2 "/1 1 move rel -83988 \r\n"
+	
+	//VDTWrite2 "/2 1 move rel -440937 \r\n"
+
+	Sleep /S 3.3	
+	
+	//////
+	//VDT2 KillIO	
+	//VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+	//VDTOpenPort2 COM4
+	//VDTOperationsPort2 COM4
+	//VDTWrite2 "/1 1 move rel -440937 \r\n"
+	//VDTWrite2 "/2 1 move rel 220468 \r\n"
+
+	//Sleep /S 3.3	        	
+	
+	//edit avg_data2
+	//display avg_data2
+	
+	//redimension/n=(21,21) avg_data2
+	// /n=(21,21) avg_data2
+	//12, 6, 8
+	
+		
+////
+	Display
+	Appendimage avg_data2
+end
+
+
+
+
+
+Function move_home()
+	string movey="/4 1 move rel 419940"
+	//string movex="/1 1 move rel 400000"
+	//string movez="/1 1 move rel 400000"
+	
+	//string blank=""
+	string commanda = movey + "\r\n"
+	//string aslia = blank + "\r\n"
+	
+	VDT2 KillIO	
+	VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+	VDTOpenPort2 COM4
+	VDTOperationsPort2 COM4
+	//VDTWrite2 "/"
+	//Sleep /S 0.5
+	
+	VDTWrite2 commanda
+	//VDTRead2 aslia
+	//print aslia
+	VDTRead2 commanda
+	//print S_VDT
+	
+	//VDTWrite2 "/1 1 stop"
+	VDTClosePort2 COM4
+	
+	//Sleep /S 1.5
+	//VDTOpenPort2 COM4
+	//VDTOperationsPort2 COM4 
+	//VDTWrite2 "/"
+	//Sleep /S 1.0		
+	
+	
+	
+end
+
+
+
+Window Graph10() : Graph
+	PauseUpdate; Silent 1		// building window...
+	Display /W=(83.25,62,566.25,544.25)/L=mf mf
+	AppendToGraph/L=temp temp/
+	AppendToGraph :Packages:WM_FilterDialog:filtered
+	ModifyGraph rgb(mf)=(0,0,65280),rgb(filtered)=(0,52224,26368)
+	ModifyGraph lblPos(left)=48
+	ModifyGraph freePos(mf)=-50
+	ModifyGraph freePos(temp)=-50
+	ModifyGraph axisEnab(mf)={0.27,1}
+	ModifyGraph axisEnab(left)={0.41,1}
+EndMacro
+
+
+
+function stop()
+	VDT2 KILLIO
+	VDTOpenPort2 COM4
+	VDTOperationsPort2 COM4
+	VDTClosePort2 COM4
+end
+
+function origin()
+
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/4 1 move rel  1536000 \r\n"//rotates 360 degrees@@@
+		VDTClosePort2 COM4			
+		
+		
+end
+
+function flip()
+
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/4 1 move rel  128000 \r\n"//rotates 30 degrees@@@@@@@
+		VDTClosePort2 COM4
+
+end
+
+
+
+function bflip()
+
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/4 1 move rel  -128000 \r\n"//rotates 30 degrees@@@@@@@
+		VDTClosePort2 COM4
+
+end
+
+function halfturn()
+
+
+	VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/4 1 move rel  768000 \r\n"//rotates 360 degrees@@@@@@@
+		VDTClosePort2 COM4
+
+
+end
+
+
+function testing()
+	VDT2 KillIO	
+	VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+	VDTOpenPort2 COM4
+	VDTOperationsPort2 COM4
+	//VDTWrite2 "/1 1 move rel 104989 \r\n" // to +Z
+	//VDTWrite2 "/2 1 move rel -220368 \r\n" // to -Y, left to right
+	//VDTWrite2 "/3 1 move rel -220368 \r\n" // to -X    , forward
+	VDTWrite2 "/1 1 move rel -104989 \r\n" // to +Z
+	VDTClosePort2 COM4
+end 
+
+
+
+function resetx()
+
+
+VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/3 1 move rel 104989 \r\n" // to +y
+		VDTClosePort2 COM4
+	
+
+end
+
+
+
+//expected result of test fun
+//so for each letter there should be 3 numbers
+
+
+
+function strtrial()
+
+
+//5 mm increment equivalent to	-104989 steps
+				VDT2 KillIO	
+				VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+				VDTOpenPort2 COM4
+				VDTOperationsPort2 COM4
+				VDTWrite2 "/3 1 move rel -1049890   \r\n"// to -X    ,go to background position, 50 mm away
+				sleep /s 4
+				VDTClosePort2 COM4
+
+end
+
+function move5z()
+
+VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/1 1 move rel 104989 \r\n" // to +Z, 5mm
+		VDTClosePort2 COM4
+	
+end
+
+function halfz()
+
+VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/1 1 move rel 104989 \r\n" // to down 5
+		VDTClosePort2 COM4
+	
+end
+
+function fullz()   //move 100mmm 
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/1 1 move rel 2099738 \r\n" // to -z, down 100mm
+		VDTClosePort2 COM4
+
+
+end
+
+function le50x()   //move 50mmm 
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/3 1 move rel -1049890 \r\n" // to +x, 5mm
+		VDTClosePort2 COM4
+
+
+end
+
+function rt50x()   //move 50mmm 
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/3 1 move rel 1049890 \r\n" // 50 right
+		VDTClosePort2 COM4
+
+
+end
+
+
+function fullx()  //move 100
+
+VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/3 1 move rel 2099738 \r\n" // to -x, 5mm
+		VDTClosePort2 COM4
+
+
+end
+
+function move5y()
+VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/2 1 move rel 104989 \r\n" // to +y, 5mm
+		VDTClosePort2 COM4
+
+end
+
+
+function complete()
+
+
+	//initialise variables
+	
+		
+make /o/n=0/d gasli                     
+make /o /n=0 avg_data2
+make/o/n=0 sayac      
+	variable slice  // degrees
+	variable xx=0, zz
+	variable bigx
+	variable counter //this denotes which increment of x, and so determines how far the x should move 
+	variable a2,b2,c2,d2
+	variable rad2deg
+	make /o/n=0 gtime, gtick, gtime2, gtick2
+	make /o/ n=15 mf, mes
+	make/o/n=10 nf, nes
+	make /o/n=2 sample_data
+	make /o/n=448  xcord, ycord,degcord
+	//make /o/n=0/d gasli        
+			
+	variable i2
+	variable lastsave2= 0
+	wave base
+	variable ret	
+	variable ang
+
+	//wave avg_data2
+	make /o/n=448 avgmf, basemf, absmf
+
+
+
+	//external loop (z motion)
+
+
+	for (zz = 0; zz < 8; zz += 1)
+		
+		
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/1 1 move rel -20998 \r\n" // to +Z, 1mm
+		sleep /s 1.5
+		VDTClosePort2 COM4
+
+			
+						variable first
+						variable initloop
+						variable zzcount
+						for(first=0;first<7;first+=1 )
+					
+									VDT2 KillIO	
+									VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+									VDTOpenPort2 COM4
+									VDTOperationsPort2 COM4
+									VDTWrite2 "/3 1 move rel -1049890 \r\n" // to left 50mm
+									print  "background check"
+									sleep /s 3
+									VDTClosePort2 COM4
+					
+	
+									
+							//get baseline in, connect to probe
+									
+									VDT2 KillIO		
+									VDT2 /P=COM3 killio, baud=9600, buffer=8192 ,databits=8,parity=0, stopbits=1, in=0, out=0
+									VDTOpenPort2 COM3
+									VDTOperationsPort2 COM3
+									VDTGetStatus2 0, 1, 1
+
+												
+									//takes the average of several values
+									make /o/ n=15 mf, mes
+
+									variable e2
+									 
+									for (i2 = 0; i2 <15; i2 += 1)
+			
+											if (60*15 < datetime-lastsave2)
+												SaveExperiment
+												lastsave2 = datetime
+											endif  //15 dakikada bir save ediyor
+				
+											ret = getpacket(sample_data)
+			
+											if (ret == 1)
+												//redimension /n=(numpnts(gtime2)+1) gtime2, gtick2, mes
+												//gtime2[numpnts(gtime2)-1] = datetime
+												//gtick2[numpnts(gtime2)-1] = ticks
+											//	mes[numpnts(gtime2)-1] = sample_data[0]			
+											mes[e2] =sample_data[0]
+											mf[e2] = mes[e2]/(2^23)*5/2/90 * 1000000   //need only this, microtesla
+											endif
+										doupdate
+										e2+=1
+										if(e2==14)
+											e2=0	
+										endif
+									endfor		
+									
+									//deletepoints 0, 15, mes
+									
+									VDTClosePort2 COM3
+	
+										ycord[a2]= initloop*5*sin(0)
+											print "y",ycord[a2]
+										xcord[b2] = initloop*5*cos(0)
+										rad2deg= 0		
+										degcord[c2]=rad2deg
+
+									WaveStats/Q mf; print "mf:", V_avg
+									basemf[d2]  = V_avg
+									print "d2:", d2
+									//deletepoints 0,15, mf
+									
+									
+								//move back to original position
+								
+									VDT2 KillIO	
+									VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+									VDTOpenPort2 COM4
+									VDTOperationsPort2 COM4
+									VDTWrite2 "/3 1 move rel 1049890 \r\n" // to right 50mm
+									print  "back2origin"
+									sleep /s 3
+									VDTClosePort2 COM4
+					
+					
+							
+										VDT2 KillIO	
+										VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+										VDTOpenPort2 COM4
+										VDTOperationsPort2 COM4
+										
+										if(initloop==0)
+										 print "origin"
+										elseif(initloop==1)             //5mm
+												VDTWrite2 "/3 1 move rel -104989 \r\n"// to -X    , forward
+												print "initloop:",initloop
+												print  "counter1"
+												
+										elseif(initloop==2)      //10mm
+												VDTWrite2 "/3 1 move rel -209978 \r\n" //-X forward
+												print "initloop:",initloop
+												print  "counter2"
+												
+										elseif(initloop==3)      //15mm
+												VDTWrite2 "/3 1 move rel -314967 \r\n"// to -X    , forward
+												print "initloop:",initloop
+												print  "counter3"
+										elseif(initloop==4)      //20mm
+												VDTWrite2 "/3 1 move rel -419956 \r\n"// to -X    , forward
+												print "initloop:",initloop
+												print  "counter4"
+										elseif(initloop==5)      //25mm
+												VDTWrite2 "/3 1 move rel -524945 \r\n"// to -X    , forward
+												print "initloop:",initloop
+												print  "counter5"
+										elseif(initloop==6)     //30mm
+												VDTWrite2 "/3 1 move rel -629934 \r\n"// to -X    , forward
+												print "initloop:",initloop	
+												print  "counter6"
+										endif 
+										
+										sleep /s 3
+										VDTClosePort2 COM4									
+										
+										
+									//get data
+										VDT2 KillIO	
+										VDT2 /P=COM3 killio, baud=9600, buffer=8192 ,databits=8,parity=0, stopbits=1, in=0, out=0
+										VDTOpenPort2 COM3
+										VDTOperationsPort2 COM3
+											 print "data acquisition"
+	
+	
+									make/o/n=10 nf, nes
+									variable f2
+									 
+										for (i2 = 0; i2 <10; i2 += 1)	
+		
+													if (60*15 < datetime-lastsave2)
+															SaveExperiment
+															lastsave2 = datetime
+													endif
+			
+														ret = getpacket(sample_data)
+									
+													if( ret == 1)
+															//redimension /n=(numpnts(gtime)+1) gtime
+															//redimension /n=(numpnts(gtime)+1)  gtick
+														//	redimension /n=(numpnts(gtime)+1)  nes 
+														//	redimension /n=(numpnts(gtime)+1) nf
+			
+															//gtime[numpnts(gtime)-1] = datetime
+															//gtick[ numpnts(gtime)-1] = ticks
+															//nes[ numpnts(gtime)-1] = sample_data[0]
+															nes[f2]=	sample_data[0]
+															nf[f2] = nes[f2]/(2^23)*5/2/90 * 1000000    //need only this, microtesla 
+				
+													endif
+														doupdate 
+												f2+=1
+											if(f2==9)
+												f2=0
+											
+											endif
+										endfor 
+										
+								
+										
+										sleep /s 1.5
+										//redimension /n=(numpnts(gasli)+1) avg_data2, gasli
+										//mf[numpnts(gasli)-1]= (nf[numpnts(sayac)+1]+nf[numpnts(sayac)+2]+nf[numpnts(sayac)+3]+nf[numpnts(sayac)+4]+nf[numpnts(sayac)+5]+nf[numpnts(sayac)+6]+mf[numpnts(sayac)+7]+nf[numpnts(sayac)+8]+nf[numpnts(sayac)+9])/9
+										WaveStats /Q nf; print "nf", V_avg 
+										absmf[d2] = V_avg - basemf[d2]
+										
+										//deletepoints 0,15, mf
+										//deletepoints 0,15, mes
+										//deletepoints 0,10, nf
+										//deletepoints 0,10, nes
+										
+										//make/o/n=10 nf
+										
+										//redimension /n= (numpnts(sayac)+10) sayac
+										
+										VDTClosePort2 COM3
+										
+										VDT2 KillIO	
+										VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+										VDTOpenPort2 COM4
+										VDTOperationsPort2 COM4
+
+										if(initloop==0)
+													 print "count1"
+						
+										elseif(initloop==1)             //5mm
+												VDTWrite2 "/3 1 move rel 104989 \r\n"// to +X    , backward
+												print "moves -5"
+							
+										elseif(initloop==2)      //10mm
+												VDTWrite2 "/3 1 move rel 209978 \r\n" // to +X    , backward
+												print "moves -10"
+										
+										elseif(initloop==3)      //15mm
+												VDTWrite2 "/3 1 move rel 314967 \r\n"//  to +X    , backward
+												print "moves -15"
+				
+										elseif(initloop==4)      //20mm
+												VDTWrite2 "/3 1 move rel 419956 \r\n"// to +X    , backward
+												print "moves -20"
+									
+										elseif(initloop==5)      //25mm
+												VDTWrite2 "/3 1 move rel 524945 \r\n"// to +X    , backward
+												print "moves -25"
+										elseif(initloop==6)     //30mm
+												VDTWrite2 "/3 1 move rel 629934 \r\n"// to +X    , backward
+												print "moves -30"
+													print "end of 1st slice"
+												initloop=0				
+										endif 
+										
+										sleep /s 3
+										VDTClosePort2 COM4	
+										a2+=1
+										b2+=1
+										c2+=1
+										d2+=1										
+										initloop+=1
+										
+
+							endfor
+
+		//mid loop, degree more than 0
+
+			
+			for(slice=1;slice<7;slice+=1)
+			        
+					//wave gtick, gtime, gtick2, gtime2
+					make /o/n=0/d gasli                     
+					make /o /n=0 avg_data2
+					make/o/n=0 sayac      
+					
+					//getting the 0th degree value, only want this to be done ONCE
+					//move to background position
+				
+
+//start the rotations				
+					VDT2 KillIO	
+					VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+					VDTOpenPort2 COM4
+					VDTOperationsPort2 COM4
+					//VDTWrite2 "/4 1 move rel  1536000 \r\n"
+					VDTWrite2 "/4 1 move rel -128000 \r\n"//rotates 30 degrees@@@@@@@@@@@@@@@@@@@@
+					VDTClosePort2 COM4
+					VDTGetStatus2 0, 1, 1
+					Sleep /S 6
+				
+	 		
+
+					
+			        //big x denotes the x motions for each slice
+						wave sample_data
+							
+							for(bigx=0; bigx<7;	bigx+=1 )
+	
+							//move to background position
+									VDT2 KillIO	
+									VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+									VDTOpenPort2 COM4
+									VDTOperationsPort2 COM4
+									VDTWrite2 "/3 1 move rel -1049890 \r\n"// to -X    , forward to 50 mm radius
+										print  "background check"
+									sleep /s 3
+									VDTClosePort2 COM4
+									
+									
+							//get baseline in, connect to probe
+									
+									VDT2 KillIO		
+									VDT2 /P=COM3 killio, baud=9600, buffer=8192 ,databits=8,parity=0, stopbits=1, in=0, out=0
+									VDTOpenPort2 COM3
+									VDTOperationsPort2 COM3
+									VDTGetStatus2 0, 1, 1
+
+												
+									//getting background
+									
+									make /o/ n=15 mf
+							
+									for (i2 = 0; i2 <15; i2 += 1)
+			
+											if (60*15 < datetime-lastsave2)
+												SaveExperiment
+												lastsave2 = datetime
+											endif  //15 dakikada bir save ediyor
+				
+											ret = getpacket(sample_data)
+			
+											if (ret == 1)
+												//redimension /n=(numpnts(gtime2)+1) gtime2, gtick2, mes
+											//gtime2[numpnts(gtime2)-1] = datetime
+											//	gtick2[numpnts(gtime2)-1] = ticks
+											//	mes[numpnts(gtime2)-1] = sample_data[0]				
+												
+											mes[e2] =sample_data[0]
+											mf[e2] = mes[e2]/(2^23)*5/2/90 * 1000000
+											
+											endif
+										doupdate
+										e2+=1
+											
+											if(e2==14)
+												e2=0
+											endif
+									endfor
+
+									sleep /s 1.5
+							
+									VDTClosePort2 COM3
+											
+									variable chunk
+									chunk=slice		
+										ang=chunk*30*pi/180	
+										print "angle:",ang
+										ycord[a2]= counter*5*sin(ang)
+											print "y",ycord[a2]
+										xcord[b2] = counter*5*cos(ang)	
+										rad2deg= ang/pi *180			
+										degcord[c2]=rad2deg
+
+									WaveStats/Q mf; print "mf", V_avg
+									basemf[d2]  = V_avg
+									print "d2:", d2
+									
+									//deletepoints 0,15, mf
+							
+
+								//move back to original position
+									VDT2 KillIO	
+									VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+									VDTOpenPort2 COM4
+									VDTOperationsPort2 COM4
+									VDTWrite2 "/3 1 move rel 1049890 \r\n"// to +X    , back to origin
+									print "back to origin"
+									sleep /s 4
+									VDTClosePort2 COM4
+					
+					
+							
+										VDT2 KillIO	
+										VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+										VDTOpenPort2 COM4
+										VDTOperationsPort2 COM4
+										
+										if(counter==0)
+										 print "count1+"
+										elseif(counter==1)             //5mm
+												VDTWrite2 "/3 1 move rel -104989 \r\n"// to -X    , forward
+												print "moves +5"
+												
+										elseif(counter==2)      //10mm
+												VDTWrite2 "/3 1 move rel -209978 \r\n" //-X forward
+												print "moves +10"
+												
+										elseif(counter==3)      //15mm
+												VDTWrite2 "/3 1 move rel -314967 \r\n"// to -X    , forward
+												print "moves +15"
+										elseif(counter==4)      //20mm
+												VDTWrite2 "/3 1 move rel -419956 \r\n"// to -X    , forward
+												print "moves +20"
+										elseif(counter==5)      //25mm
+												VDTWrite2 "/3 1 move rel -524945 \r\n"// to -X    , forward
+												print "moves +25"
+										elseif(counter==6)     //30mm
+												VDTWrite2 "/3 1 move rel -629934 \r\n"// to -X    , forward
+												print "moves +30"
+										endif 
+										
+										sleep /s 3
+										VDTClosePort2 COM4									
+										
+										
+										//get data
+										VDT2 KillIO	
+										VDT2 /P=COM3 killio, baud=9600, buffer=8192 ,databits=8,parity=0, stopbits=1, in=0, out=0
+										VDTOpenPort2 COM3
+										VDTOperationsPort2 COM3
+		
+									
+										
+										for (i2 = 0; i2 <10; i2 += 1)	
+		
+													if (60*15 < datetime-lastsave2)
+															SaveExperiment
+															lastsave2 = datetime
+													endif
+			
+														ret = getpacket(sample_data)
+									
+													if( ret == 1)
+														//	redimension /n=(numpnts(gtime)+1) gtime
+														//	redimension /n=(numpnts(gtime)+1)  gtick
+														//	redimension /n=(numpnts(gtime)+1)  nes 
+															//redimension /n=(numpnts(gtime)+1) mf, nf
+			
+														//	gtime[numpnts(gtime)-1] = datetime
+														//	gtick[ numpnts(gtime)-1] = ticks
+														//	nes[ numpnts(gtime)-1] = 
+															nes[f2]=sample_data[0]
+															nf[f2] = nes[f2]/(2^23)*5/2/90 * 1000000   //need only this, microtesla 
+															
+															//error
+													endif
+														doupdate 
+														f2+=1
+														
+												if(f2==9)
+													f2=0
+												endif
+										endfor 
+									
+										WaveStats/Q nf; print "nf", V_avg
+										
+										absmf[d2] = V_avg - basemf[d2]
+			
+										deletepoints 0,10, nf
+										make/o/n=10 nf
+									//	redimension /n=(numpnts(gasli)+1) avg_data2, gasli
+										//absmf[numpnts(gasli)-1]= (nf[numpnts(sayac)+1]+nf[numpnts(sayac)+2]+nf[numpnts(sayac)+3]+nf[numpnts(sayac)+4]+nf[numpnts(sayac)+5]+nf[numpnts(sayac)+6]+nf[numpnts(sayac)+7]+nf[numpnts(sayac)+8]+nf[numpnts(sayac)+9])/9
+									//	redimension /n= (numpnts(sayac)+10) sayac
+										sleep /s 1
+										VDTClosePort2 COM3
+										
+										VDT2 KillIO	
+										VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+										VDTOpenPort2 COM4
+										VDTOperationsPort2 COM4
+
+										if(counter==0)
+													 print "count1-"
+											//		 slicheck+=1
+						
+										elseif(counter==1)             //5mm
+												VDTWrite2 "/3 1 move rel 104989 \r\n"// to +X    , backward
+												print "moves -5"
+												// slicheck+=1
+							
+										elseif(counter==2)      //10mm
+												VDTWrite2 "/3 1 move rel 209978 \r\n" // to +X    , backward
+												print "moves -10"
+												// slicheck+=1
+										
+										elseif(counter==3)      //15mm
+												VDTWrite2 "/3 1 move rel 314967 \r\n"//  to +X    , backward
+												print "moves -15"
+												// slicheck+=1
+				
+										elseif(counter==4)      //20mm
+												VDTWrite2 "/3 1 move rel 419956 \r\n"// to +X    , backward
+												print "moves -20"
+												// slicheck+=1
+									
+										elseif(counter==5)      //25mm
+												VDTWrite2 "/3 1 move rel 524945 \r\n"// to +X    , backward
+												print "moves -25"
+												// slicheck+=1
+										elseif(counter==6)     //30mm
+												VDTWrite2 "/3 1 move rel 629934 \r\n"// to +X    , backward
+												print "moves -30"
+												counter=0	
+												// slicheck=0			
+										endif 
+										
+										sleep /s 3
+										VDTClosePort2 COM4		
+												Display 
+												AppendXYZContour absmf vs {xcord, ycord }		
+										counter+=1
+
+						//goes down the table/array
+								a2+=1	
+								b2+=1
+								c2+=1
+								d2+=1
+						endfor
+						
+									
+				
+			endfor
+	
+			
+		
+		variable home
+		
+		for(home=0; home<7; home+=1)
+		
+				VDT2 KillIO	
+				VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+				VDTOpenPort2 COM4
+				VDTOperationsPort2 COM4
+				VDTWrite2 "/4 1 move rel  128000 \r\n"//rotates 30 degrees@@@@@@@
+				VDTClosePort2 COM4
+		
+		endfor
+		
+		zzcount+=1
+	
+		Display
+		AppendXYZContour absmf vs {xcord, ycord }	
+		//AppendXYZContour /W=zzcount absmf vs {xcord, ycord }	
+		//AppendXYZContour/B=xcord / L=ycord basemf vs {xcord, ycord }			
+	endfor
+		
+
+end
+
+
+function gohome()
+
+//choose and origin
+
+//measure max x and y of the rectangle
+//then measure range of the actuatos
+
+
+end
+
+function halfpi()
+
+		VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/4 1 move rel  768000 \r\n"//rotates 180 degrees@@@@@@@
+		VDTClosePort2 COM4
+
+end
+
+function quartpi()
+
+VDT2 KillIO	
+		VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+		VDTOpenPort2 COM4
+		VDTOperationsPort2 COM4
+		VDTWrite2 "/4 1 move rel  384000 \r\n"//rotates 180 degrees@@@@@@@
+		VDTClosePort2 COM4
+end
+
+
+function checkmove()
+
+
+	variable a,b
+	for(a=0; a<3; a+=1)
+		
+				VDT2 KillIO	
+				VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+				VDTOpenPort2 COM4
+				VDTOperationsPort2 COM4
+				VDTWrite2 "/4 1 move rel  128000 \r\n"//rotates 30 degrees@@@@@@@
+				
+				VDTClosePort2 COM4
+			
+				VDT2 KillIO	
+				VDT2 /P=COM3 killio, baud=9600, buffer=8192 ,databits=8,parity=0, stopbits=1, in=0, out=0
+				VDTOpenPort2 COM3
+				VDTOperationsPort2 COM3
+					sleep /s 7
+				VDTClosePort2 COM3
+
+				
+
+	endfor
+
+	for(b=0; b<3; b+=1)
+		
+				VDT2 KillIO	
+				VDT2 /P=COM4 baud=115200, stopbits=1, databits=8, parity=0
+				VDTOpenPort2 COM4
+				VDTOperationsPort2 COM4
+				VDTWrite2 "/4 1 move rel  -128000 \r\n"//rotates 30 degrees@@@@@@@
+			sleep /s 7
+				VDTClosePort2 COM4
+		
+	endfor
+		
+
+end
+Window Graph53() : Graph
+	PauseUpdate; Silent 1		// building window...
+	Display /W=(35.25,43.25,429.75,251.75) mf
+EndMacro
+
+Window Graph67() : Graph
+	PauseUpdate; Silent 1		// building window...
+	Display /W=(35.25,43.25,429.75,251.75)
+EndMacro
